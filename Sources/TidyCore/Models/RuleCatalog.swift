@@ -21,10 +21,13 @@ public struct JSONRuleCatalog: RuleCatalog {
     }
 
     public static func bundled() throws -> JSONRuleCatalog {
-        guard let rulesURL = Bundle.module.url(forResource: "rules", withExtension: "json") else {
+        if let applicationRulesURL = Bundle.main.url(forResource: "rules", withExtension: "json") {
+            return JSONRuleCatalog(data: try Data(contentsOf: applicationRulesURL))
+        }
+        guard let packageRulesURL = Bundle.module.url(forResource: "rules", withExtension: "json") else {
             throw RuleCatalogError.missingBundledRules
         }
-        return JSONRuleCatalog(data: try Data(contentsOf: rulesURL))
+        return JSONRuleCatalog(data: try Data(contentsOf: packageRulesURL))
     }
 
     public func rules() throws -> [JunkRule] {
