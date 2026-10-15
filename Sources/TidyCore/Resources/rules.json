@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "rules": [
+    {
+      "id": "user-caches",
+      "category": "userCaches",
+      "path": "~/Library/Caches",
+      "scope": "children",
+      "excludedNames": [
+        "CloudKit",
+        "FamilyCircle",
+        "com.apple.akd",
+        "com.apple.bird",
+        "com.apple.containermanagerd",
+        "com.apple.HomeKit",
+        "com.apple.homed",
+        "com.apple.nsurlsessiond"
+      ],
+      "unselectedComponentPrefixes": [
+        "com.apple.",
+        "familycircled",
+        "GeoServices",
+        "Animoji",
+        "GameKit",
+        "softwareupdate"
+      ]
+    },
+    {
+      "id": "container-caches",
+      "category": "containerCaches",
+      "path": "~/Library/Containers/*/Data/Library/Caches",
+      "scope": "children",
+      "unselectedComponentPrefixes": [
+        "com.apple."
+      ]
+    },
+    {
+      "id": "user-logs",
+      "category": "userLogs",
+      "path": "~/Library/Logs",
+      "scope": "children"
+    },
+    {
+      "id": "container-logs",
+      "category": "containerLogs",
+      "path": "~/Library/Containers/*/Data/Library/Logs",
+      "scope": "children",
+      "unselectedComponentPrefixes": [
+        "com.apple."
+      ]
+    },
+    {
+      "id": "xcode-derived-data",
+      "category": "developerJunk",
+      "path": "~/Library/Developer/Xcode/DerivedData",
+      "scope": "children"
+    },
+    {
+      "id": "core-simulator-caches",
+      "category": "developerJunk",
+      "path": "~/Library/Developer/CoreSimulator/Caches",
+      "scope": "children"
+    },
+    {
+      "id": "xcode-archives",
+      "category": "developerJunk",
+      "path": "~/Library/Developer/Xcode/Archives",
+      "scope": "children",
+      "selectedByDefault": false
+    },
+    {
+      "id": "xcode-ios-device-support",
+      "category": "developerJunk",
+      "path": "~/Library/Developer/Xcode/iOS DeviceSupport",
+      "scope": "children",
+      "selectedByDefault": false
+    },
+    {
+      "id": "user-trash",
+      "category": "trash",
+      "path": "~/.Trash",
+      "scope": "children"
+    }
+  ]
+}
