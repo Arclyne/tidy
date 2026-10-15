@@ -28,7 +28,24 @@ public struct CompositeRemovalPolicy: RemovalPolicy {
 }
 
 public struct ProtectedPathPolicy: RemovalPolicy {
-    private static let protectedSystemPaths = ["/", "/Applications", "/Library", "/System", "/Users", "/Volumes", "/private", "/usr"]
+    private static let protectedSystemPaths = [
+        "/",
+        "/Applications",
+        "/Applications/Utilities",
+        "/Library",
+        "/Library/Application Support",
+        "/Library/Caches",
+        "/Library/LaunchAgents",
+        "/Library/LaunchDaemons",
+        "/Library/Logs",
+        "/Library/Preferences",
+        "/Library/PrivilegedHelperTools",
+        "/System",
+        "/Users",
+        "/Volumes",
+        "/private",
+        "/usr"
+    ]
     private static let protectedSystemPrefixes = ["/System/", "/usr/", "/bin/", "/sbin/", "/private/var/db/", "/Library/Apple/"]
     private static let protectedHomeSubpaths = [
         "",

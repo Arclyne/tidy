@@ -96,3 +96,35 @@ final class RecordingFileRemover: FileRemoving {
 func propertyListData(_ propertyList: [String: Any]) throws -> Data {
     try PropertyListSerialization.data(fromPropertyList: propertyList, format: .xml, options: 0)
 }
+
+struct StaticUsageReader: ApplicationUsageReading {
+    let lastUsedDate: Date?
+
+    func lastUsedDate(ofApplicationAt bundleURL: URL) -> Date? {
+        lastUsedDate
+    }
+}
+
+final class RecordingCommandRunner: PrivilegedCommandRunning {
+    private(set) var receivedCommands: [String] = []
+    private let onRun: (String) -> Bool
+
+    init(onRun: @escaping (String) -> Bool) {
+        self.onRun = onRun
+    }
+
+    func run(shellCommand: String) async -> Bool {
+        receivedCommands.append(shellCommand)
+        return onRun(shellCommand)
+    }
+}
+
+struct FailingFileRemover: FileRemoving {
+    let isPermissionDenied: Bool
+
+    func remove(_ items: [ScanItem]) async -> RemovalReport {
+        RemovalReport(failures: items.map {
+            RemovalFailure(item: $0, reason: "Denied", isPermissionDenied: isPermissionDenied)
+        })
+    }
+}

@@ -7,9 +7,12 @@ public struct InstalledApplication: Identifiable, Hashable, Sendable {
     public let version: String?
     public let matchingNames: [String]
     public let applicationGroups: [String]
+    public let source: ApplicationSource
+    public let lastUsedDate: Date?
 
     public var id: URL { bundleURL }
-    public var isAppleApplication: Bool { bundleIdentifier.hasPrefix("com.apple.") }
+    public var isAppleApplication: Bool { vendor == .apple }
+    public var vendor: ApplicationVendor { ApplicationVendor(bundleIdentifier: bundleIdentifier) }
 
     public init(
         bundleURL: URL,
@@ -17,7 +20,9 @@ public struct InstalledApplication: Identifiable, Hashable, Sendable {
         name: String,
         version: String? = nil,
         matchingNames: [String] = [],
-        applicationGroups: [String] = []
+        applicationGroups: [String] = [],
+        source: ApplicationSource = .other,
+        lastUsedDate: Date? = nil
     ) {
         self.bundleURL = bundleURL
         self.bundleIdentifier = bundleIdentifier
@@ -25,5 +30,7 @@ public struct InstalledApplication: Identifiable, Hashable, Sendable {
         self.version = version
         self.matchingNames = matchingNames.isEmpty ? [name] : matchingNames
         self.applicationGroups = applicationGroups
+        self.source = source
+        self.lastUsedDate = lastUsedDate
     }
 }

@@ -27,12 +27,24 @@ struct AppDependencies {
             RunningApplicationPolicy(runningApplicationsProvider: WorkspaceRunningApplicationsProvider())
         ])
 
+        let trashDirectory = homeDirectory.appendingPathComponent(".Trash")
         let liveRemover = PolicyGuardedFileRemover(
             policy: removalPolicy,
             remover: TrashBinAwareFileRemover(
-                trashDirectory: homeDirectory.appendingPathComponent(".Trash"),
+                trashDirectory: trashDirectory,
                 trashedItemRemover: PermanentFileRemover(),
-                regularItemRemover: TrashFileRemover()
+                regularItemRemover: EscalatingFileRemover(
+                    primaryRemover: TrashFileRemover(),
+                    escalatedRemover: AdministratorFileRemover(
+                        commandRunner: AppleScriptPrivilegedCommandRunner(),
+                        trashDirectory: trashDirectory,
+                        fileSystem: fileSystem
+                    ),
+                    escalatableRoots: [
+                        URL(fileURLWithPath: "/Applications"),
+                        URL(fileURLWithPath: "/Library")
+                    ]
+                )
             )
         )
         let dryRunRemover = PolicyGuardedFileRemover(policy: removalPolicy, remover: DryRunFileRemover())
@@ -45,7 +57,8 @@ struct AppDependencies {
             fileSystem: fileSystem,
             bundleReader: InfoPlistApplicationReader(
                 fileSystem: fileSystem,
-                entitlementsReader: CodeSignatureEntitlementsReader()
+                entitlementsReader: CodeSignatureEntitlementsReader(),
+                usageReader: SpotlightApplicationUsageReader()
             )
         )
 

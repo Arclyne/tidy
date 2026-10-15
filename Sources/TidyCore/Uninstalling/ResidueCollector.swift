@@ -32,13 +32,18 @@ public struct ResidueCollector {
 
 public struct ResidueCollectorFactory {
     private let fileSystem: any FileSystemReading
+    private let systemLibraryDirectory: URL
 
-    public init(fileSystem: any FileSystemReading) {
+    public init(
+        fileSystem: any FileSystemReading,
+        systemLibraryDirectory: URL = URL(fileURLWithPath: "/Library")
+    ) {
         self.fileSystem = fileSystem
+        self.systemLibraryDirectory = systemLibraryDirectory
     }
 
     public func makeCollector(installedApplications: [InstalledApplication]) -> ResidueCollector {
-        let libraryDirectory = fileSystem.homeDirectory.appendingPathComponent("Library")
+        let userLibraryDirectory = fileSystem.homeDirectory.appendingPathComponent("Library")
         let bundleIdentifierMatcher = ExclusiveResidueMatcher(
             matcher: BundleIdentifierMatcher(),
             installedApplications: installedApplications
@@ -47,70 +52,84 @@ public struct ResidueCollectorFactory {
             matchers: [bundleIdentifierMatcher, NameWordsMatcher()]
         )
 
-        func libraryFolder(_ relativePath: String) -> URL {
-            libraryDirectory.appendingPathComponent(relativePath)
+        func userFolder(_ relativePath: String) -> URL {
+            userLibraryDirectory.appendingPathComponent(relativePath)
+        }
+
+        func systemFolder(_ relativePath: String) -> URL {
+            systemLibraryDirectory.appendingPathComponent(relativePath)
         }
 
         let fetchers: [any ResidueFetcher] = [
             DirectoryResidueFetcher(
                 group: .container,
-                directories: [libraryFolder("Containers")],
+                directories: [userFolder("Containers")],
                 matcher: bundleIdentifierMatcher,
                 fileSystem: fileSystem
             ),
             GroupContainerResidueFetcher(
-                groupContainersDirectory: libraryFolder("Group Containers"),
+                groupContainersDirectory: userFolder("Group Containers"),
                 installedApplications: installedApplications,
                 fileSystem: fileSystem
             ),
             DirectoryResidueFetcher(
                 group: .preferences,
-                directories: [libraryFolder("Preferences"), libraryFolder("Preferences/ByHost")],
+                directories: [userFolder("Preferences"), userFolder("Preferences/ByHost"), systemFolder("Preferences")],
                 matcher: bundleIdentifierMatcher,
                 fileSystem: fileSystem
             ),
             DirectoryResidueFetcher(
                 group: .applicationSupport,
-                directories: [libraryFolder("Application Support")],
+                directories: [userFolder("Application Support"), systemFolder("Application Support")],
                 matcher: bundleIdentifierOrNameMatcher,
                 fileSystem: fileSystem
             ),
             DirectoryResidueFetcher(
                 group: .caches,
-                directories: [libraryFolder("Caches")],
+                directories: [userFolder("Caches"), systemFolder("Caches")],
                 matcher: bundleIdentifierOrNameMatcher,
                 fileSystem: fileSystem
             ),
             DirectoryResidueFetcher(
                 group: .logs,
-                directories: [libraryFolder("Logs")],
+                directories: [userFolder("Logs"), systemFolder("Logs")],
                 matcher: bundleIdentifierOrNameMatcher,
                 fileSystem: fileSystem
             ),
             DirectoryResidueFetcher(
                 group: .crashReports,
                 directories: [
-                    libraryFolder("Logs/DiagnosticReports"),
-                    libraryFolder("Logs/DiagnosticReports/Retired"),
-                    libraryFolder("Application Support/CrashReporter")
+                    userFolder("Logs/DiagnosticReports"),
+                    userFolder("Logs/DiagnosticReports/Retired"),
+                    userFolder("Application Support/CrashReporter")
                 ],
                 matcher: CrashReportMatcher(),
                 fileSystem: fileSystem
             ),
             DirectoryResidueFetcher(
                 group: .savedState,
-                directories: [libraryFolder("Saved Application State")],
+                directories: [userFolder("Saved Application State")],
                 matcher: bundleIdentifierMatcher,
                 fileSystem: fileSystem
             ),
             DirectoryResidueFetcher(
                 group: .webData,
-                directories: [libraryFolder("HTTPStorages"), libraryFolder("WebKit"), libraryFolder("Cookies")],
+                directories: [userFolder("HTTPStorages"), userFolder("WebKit"), userFolder("Cookies")],
                 matcher: bundleIdentifierMatcher,
                 fileSystem: fileSystem
             ),
             LaunchAgentResidueFetcher(
-                launchAgentsDirectory: libraryFolder("LaunchAgents"),
+                launchAgentDirectories: [
+                    userFolder("LaunchAgents"),
+                    systemFolder("LaunchAgents"),
+                    systemFolder("LaunchDaemons")
+                ],
+                matcher: bundleIdentifierMatcher,
+                fileSystem: fileSystem
+            ),
+            DirectoryResidueFetcher(
+                group: .privilegedHelpers,
+                directories: [systemFolder("PrivilegedHelperTools")],
                 matcher: bundleIdentifierMatcher,
                 fileSystem: fileSystem
             )

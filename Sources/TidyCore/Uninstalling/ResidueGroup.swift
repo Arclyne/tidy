@@ -12,6 +12,7 @@ public enum ResidueGroup: String, CaseIterable, Sendable {
     case savedState
     case webData
     case launchAgents
+    case privilegedHelpers
 
     public var title: String {
         switch self {
@@ -25,7 +26,8 @@ public enum ResidueGroup: String, CaseIterable, Sendable {
         case .crashReports: return "Crash Reports"
         case .savedState: return "Saved State"
         case .webData: return "Web Data & Cookies"
-        case .launchAgents: return "Launch Agents"
+        case .launchAgents: return "Launch Agents & Daemons"
+        case .privilegedHelpers: return "Privileged Helpers"
         }
     }
 }
