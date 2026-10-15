@@ -18,7 +18,7 @@ public struct TrashFileRemover: FileRemoving {
                 try fileManager.trashItem(at: item.url, resultingItemURL: nil)
                 report.removedItems.append(item)
             } catch {
-                report.failures.append(RemovalFailure(item: item, reason: error.localizedDescription))
+                report.failures.append(RemovalFailure(item: item, error: error))
             }
         }
         return report
@@ -39,7 +39,7 @@ public struct PermanentFileRemover: FileRemoving {
                 try fileManager.removeItem(at: item.url)
                 report.removedItems.append(item)
             } catch {
-                report.failures.append(RemovalFailure(item: item, reason: error.localizedDescription))
+                report.failures.append(RemovalFailure(item: item, error: error))
             }
         }
         return report
@@ -102,5 +102,37 @@ public struct TrashBinAwareFileRemover: FileRemoving {
         let trashedItemsReport = await trashedItemRemover.remove(itemsAlreadyInTrash)
         let regularItemsReport = await regularItemRemover.remove(itemsOutsideTrash)
         return trashedItemsReport + regularItemsReport
+    }
+}
+
+public struct EscalatingFileRemover: FileRemoving {
+    private let primaryRemover: any FileRemoving
+    private let escalatedRemover: any FileRemoving
+    private let escalatableRootPaths: [String]
+
+    public init(
+        primaryRemover: any FileRemoving,
+        escalatedRemover: any FileRemoving,
+        escalatableRoots: [URL]
+    ) {
+        self.primaryRemover = primaryRemover
+        self.escalatedRemover = escalatedRemover
+        self.escalatableRootPaths = escalatableRoots.map { $0.standardizedFileURL.path + "/" }
+    }
+
+    public func remove(_ items: [ScanItem]) async -> RemovalReport {
+        let primaryReport = await primaryRemover.remove(items)
+        let escalatableFailures = primaryReport.failures.filter { isEscalatable($0) }
+        guard !escalatableFailures.isEmpty else { return primaryReport }
+
+        let escalatedIDs = Set(escalatableFailures.map(\.id))
+        let remainingFailures = primaryReport.failures.filter { !escalatedIDs.contains($0.id) }
+        let escalatedReport = await escalatedRemover.remove(escalatableFailures.map(\.item))
+        return RemovalReport(removedItems: primaryReport.removedItems, failures: remainingFailures) + escalatedReport
+    }
+
+    private func isEscalatable(_ failure: RemovalFailure) -> Bool {
+        let path = failure.item.url.standardizedFileURL.path
+        return failure.isPermissionDenied && escalatableRootPaths.contains { path.hasPrefix($0) }
     }
 }

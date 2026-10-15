@@ -13,6 +13,13 @@ final class UninstallingTests: XCTestCase {
         home = nil
     }
 
+    private func makeCollectorFactory() -> ResidueCollectorFactory {
+        ResidueCollectorFactory(
+            fileSystem: home.fileSystem,
+            systemLibraryDirectory: home.url.appendingPathComponent("SystemLibrary")
+        )
+    }
+
     func testApplicationCatalogReadsBundlesInNestedFoldersAndSkipsDuplicates() throws {
         try home.createApplication(named: "Alpha", bundleIdentifier: "com.example.alpha")
         try home.createApplication(named: "Utilities/Beta", bundleIdentifier: "com.example.beta")
@@ -20,7 +27,11 @@ final class UninstallingTests: XCTestCase {
         let catalog = DirectoryApplicationCatalog(
             searchDirectories: [home.url.appendingPathComponent("Applications")],
             fileSystem: home.fileSystem,
-            bundleReader: InfoPlistApplicationReader(fileSystem: home.fileSystem, entitlementsReader: NoEntitlementsReader())
+            bundleReader: InfoPlistApplicationReader(
+                fileSystem: home.fileSystem,
+                entitlementsReader: NoEntitlementsReader(),
+                usageReader: StaticUsageReader(lastUsedDate: nil)
+            )
         )
 
         let applications = catalog.installedApplications()
@@ -37,7 +48,7 @@ final class UninstallingTests: XCTestCase {
         try home.createFile("Library/Saved Application State/com.example.Example.savedState/window.data")
         try home.createFile("Library/Application Support/Unrelated/data.db")
         let application = InstalledApplication(bundleURL: bundleURL, bundleIdentifier: "com.example.Example", name: "Example")
-        let collector = ResidueCollectorFactory(fileSystem: home.fileSystem)
+        let collector = makeCollectorFactory()
             .makeCollector(installedApplications: [application])
 
         let report = collector.collect(for: application)
@@ -59,7 +70,7 @@ final class UninstallingTests: XCTestCase {
         try home.createFile("Library/Logs/DiagnosticReports/Safari-2026-10-14-101010.ips")
         let application = InstalledApplication(bundleURL: bundleURL, bundleIdentifier: "com.codeweavers.CrossOver", name: "CrossOver")
 
-        let report = ResidueCollectorFactory(fileSystem: home.fileSystem)
+        let report = makeCollectorFactory()
             .makeCollector(installedApplications: [application])
             .collect(for: application)
 
@@ -80,11 +91,31 @@ final class UninstallingTests: XCTestCase {
         )
         let application = InstalledApplication(bundleURL: bundleURL, bundleIdentifier: "io.syncer.app", name: "Syncer")
 
-        let report = ResidueCollectorFactory(fileSystem: home.fileSystem)
+        let report = makeCollectorFactory()
             .makeCollector(installedApplications: [application])
             .collect(for: application)
 
         XCTAssertEqual(report.items(in: .launchAgents).map(\.name), ["io.syncer.helper.plist"])
+    }
+
+    func testSystemLibraryDaemonsHelpersAndSupportFilesAreCollected() throws {
+        let bundleURL = try home.createApplication(named: "Syncer", bundleIdentifier: "io.syncer.app")
+        try home.createFile(
+            "SystemLibrary/LaunchDaemons/io.syncer.app.helper.plist",
+            contents: propertyListData(["Label": "io.syncer.app.helper", "Program": "/Library/PrivilegedHelperTools/io.syncer.app.helper"])
+        )
+        try home.createFile("SystemLibrary/PrivilegedHelperTools/io.syncer.app.helper")
+        try home.createFile("SystemLibrary/Application Support/Syncer/state.db")
+        try home.createFile("SystemLibrary/Application Support/Unrelated/state.db")
+        let application = InstalledApplication(bundleURL: bundleURL, bundleIdentifier: "io.syncer.app", name: "Syncer")
+
+        let report = makeCollectorFactory()
+            .makeCollector(installedApplications: [application])
+            .collect(for: application)
+
+        XCTAssertEqual(report.items(in: .launchAgents).map(\.name), ["io.syncer.app.helper.plist"])
+        XCTAssertEqual(report.items(in: .privilegedHelpers).map(\.name), ["io.syncer.app.helper"])
+        XCTAssertEqual(report.items(in: .applicationSupport).map(\.name), ["Syncer"])
     }
 
     func testGroupContainersSharedWithOtherApplicationsAreKept() throws {

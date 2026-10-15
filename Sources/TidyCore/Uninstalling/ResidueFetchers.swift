@@ -62,24 +62,25 @@ public struct GroupContainerResidueFetcher: ResidueFetcher {
 
 public struct LaunchAgentResidueFetcher: ResidueFetcher {
     public let group: ResidueGroup = .launchAgents
-    private let launchAgentsDirectory: URL
+    private let launchAgentDirectories: [URL]
     private let matcher: any ResidueMatching
     private let launchAgentReader: LaunchAgentReader
     private let fileSystem: any FileSystemReading
 
     public init(
-        launchAgentsDirectory: URL,
+        launchAgentDirectories: [URL],
         matcher: any ResidueMatching,
         fileSystem: any FileSystemReading
     ) {
-        self.launchAgentsDirectory = launchAgentsDirectory
+        self.launchAgentDirectories = launchAgentDirectories
         self.matcher = matcher
         self.launchAgentReader = LaunchAgentReader(fileSystem: fileSystem)
         self.fileSystem = fileSystem
     }
 
     public func residues(of application: InstalledApplication) -> [URL] {
-        fileSystem.contentsOfDirectory(at: launchAgentsDirectory)
+        launchAgentDirectories
+            .flatMap { fileSystem.contentsOfDirectory(at: $0) }
             .filter { $0.pathExtension == "plist" }
             .filter { belongs($0, to: application) }
     }

@@ -11,10 +11,18 @@ public protocol ApplicationCatalog {
 public struct InfoPlistApplicationReader: ApplicationBundleReading {
     private let propertyListReader: PropertyListReader
     private let entitlementsReader: any EntitlementsReading
+    private let usageReader: any ApplicationUsageReading
+    private let sourceDetector: ApplicationSourceDetector
 
-    public init(fileSystem: any FileSystemReading, entitlementsReader: any EntitlementsReading) {
+    public init(
+        fileSystem: any FileSystemReading,
+        entitlementsReader: any EntitlementsReading,
+        usageReader: any ApplicationUsageReading
+    ) {
         self.propertyListReader = PropertyListReader(fileSystem: fileSystem)
         self.entitlementsReader = entitlementsReader
+        self.usageReader = usageReader
+        self.sourceDetector = ApplicationSourceDetector(fileSystem: fileSystem)
     }
 
     public func application(at bundleURL: URL) -> InstalledApplication? {
@@ -36,7 +44,9 @@ public struct InfoPlistApplicationReader: ApplicationBundleReading {
             name: fileName,
             version: infoDictionary["CFBundleShortVersionString"] as? String,
             matchingNames: uniqueNames,
-            applicationGroups: entitlementsReader.applicationGroups(of: bundleURL)
+            applicationGroups: entitlementsReader.applicationGroups(of: bundleURL),
+            source: sourceDetector.source(ofApplicationAt: bundleURL, bundleIdentifier: bundleIdentifier),
+            lastUsedDate: usageReader.lastUsedDate(ofApplicationAt: bundleURL)
         )
     }
 }

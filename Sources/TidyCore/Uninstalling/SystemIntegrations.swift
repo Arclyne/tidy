@@ -1,5 +1,15 @@
 import AppKit
+import CoreServices
 import Foundation
+
+public struct SpotlightApplicationUsageReader: ApplicationUsageReading {
+    public init() {}
+
+    public func lastUsedDate(ofApplicationAt bundleURL: URL) -> Date? {
+        guard let metadataItem = MDItemCreateWithURL(kCFAllocatorDefault, bundleURL as CFURL) else { return nil }
+        return MDItemCopyAttribute(metadataItem, kMDItemLastUsedDate) as? Date
+    }
+}
 
 public struct WorkspaceRunningApplicationsProvider: RunningApplicationsProviding {
     public init() {}
